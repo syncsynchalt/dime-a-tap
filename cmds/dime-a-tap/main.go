@@ -12,14 +12,13 @@ func dieUsage(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
-	fmt.Fprintf(os.Stderr, "Usage: %s [port]\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [flags] [port]\n", os.Args[0])
 	flag.PrintDefaults()
 	os.Exit(1)
 }
 
 func main() {
-	handshakes := flag.String("handshakes", "",
-		"directory to write client/server handshake information for each connection")
+	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
 	flag.Parse()
 	if flag.NArg() != 1 {
 		dieUsage(fmt.Errorf("No listen port specified"))
@@ -29,11 +28,10 @@ func main() {
 	if err != nil {
 		dieUsage(err)
 	}
-	fmt.Println("port is", port)
 
 	err = listen.Listen(listen.Opts{
-		Port:       port,
-		Handshakes: *handshakes,
+		Port:   port,
+		RawDir: *rawDir,
 	})
 	if err != nil {
 		panic(err)

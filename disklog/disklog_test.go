@@ -12,12 +12,12 @@ import (
 )
 
 func TestDumpPacketEmptyDir(t *testing.T) {
-	err := DumpPacket("", "label", []byte("\x01\x02\x03"))
+	err := DumpPacket("", "label", "c", []byte("\x01\x02\x03"))
 	test.Ok(t, err)
 }
 
 func TestDumpPacketNonExistDir(t *testing.T) {
-	err := DumpPacket("/does/not/exist", "label", []byte("\x01\x02\x03"))
+	err := DumpPacket("/does/not/exist", "label", "c", []byte("\x01\x02\x03"))
 	test.Assert(t, err != nil, "error is not set")
 	prefix := "unable to log packet: open /does/not/exist/label.20"
 	test.Assert(t, strings.HasPrefix(err.Error(), prefix),
@@ -35,11 +35,13 @@ func TestDumpPacket(t *testing.T) {
 	mydir := fmt.Sprintf("/tmp/golang.test.%d", time.Now().UnixNano())
 	os.Mkdir(mydir, 0755)
 	defer os.RemoveAll(mydir)
-	err := DumpPacket(mydir, "[::1]:80134", []byte("\x01\x02\x03"))
+	err := DumpPacket(mydir, "[::1]:80134", "c", []byte("\x01\x02\x03"))
 
 	file := getFirstFile(t, mydir)
-	test.Assert(t, strings.HasPrefix(file, mydir + "/[::1]:80134.20"),
+	test.Assert(t, strings.HasPrefix(file, mydir+"/[::1]:80134.20"),
 		"file %s doesn't start with expected prefix", file)
+	test.Assert(t, strings.HasSuffix(file, ".c"),
+		"file %s doesn't end with expected suffix", file)
 
 	data, err := ioutil.ReadFile(file)
 	test.Ok(t, err)

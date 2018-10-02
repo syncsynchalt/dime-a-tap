@@ -8,24 +8,41 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/syncsynchalt/dime-a-tap/disklog"
+	"github.com/syncsynchalt/dime-a-tap/snoopconn"
 )
 
+// intercepts Accept() and introduces a SnoopConn
+type ListenWrap struct {
+	net.Listener
+	opts Opts
+}
+
+// override of net.Listener.Accept()
+func (l *ListenWrap) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	tc := snoopconn.New(conn, l.opts.RawDir)
+	return tc, err
+}
+
 type Opts struct {
-	Port       int
-	Handshakes string
+	Port   int
+	RawDir string
 }
 
 func Listen(opts Opts) error {
 	l := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(opts.Port))
+	mylisten := ListenWrap{Listener: ln, opts: opts}
 	if err != nil {
 		return err
 	}
 	l.Printf("started listen on port %d\n", opts.Port)
 	for {
-		conn, err := ln.Accept()
+		conn, err := mylisten.Accept()
 		if err != nil {
 			l.Panicln("unable to accept connection:", err)
 		}
@@ -41,10 +58,10 @@ func handleConnection(conn net.Conn, opts Opts) {
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			l.Println("Unable to read:", err)
+			l.Println("unable to read:", err)
 			break
 		}
-		disklog.DumpPacket(opts.Handshakes, remoteName, buf[:n])
+
 		data := buf[:n]
 		for len(data) > 0 && (data[len(data)-1] == '\r' || data[len(data)-1] == '\n') {
 			data = data[:len(data)-1]
