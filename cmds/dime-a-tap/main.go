@@ -21,9 +21,20 @@ func dieUsage(err error) {
 }
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "ca-init" {
+		err := ca.CreateCAStore(os.Args[2])
+		if err != nil {
+			dieUsage(err)
+		} else {
+			fmt.Println("success")
+			os.Exit(0)
+		}
+	}
+
 	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
 	caCert := flag.String("cacert", "", "optional path to CA certificate file")
 	caKey := flag.String("cakey", "", "optional path to CA private key file")
+	caDir := flag.String("cadir", "", "optional path to CA key store (use 'dime-a-tap ca-init {dir}' to create)")
 	flag.Parse()
 	if flag.NArg() != 1 {
 		dieUsage(fmt.Errorf("No listen port specified"))
@@ -37,22 +48,15 @@ func main() {
 	opts := server.Opts{
 		Port:   port,
 		RawDir: *rawDir,
+		CADir:  *caDir,
 	}
 
-	if *caKey != "" {
-		opts.CaKey, err = ioutil.ReadFile(*caKey)
-	} else {
-		opts.CaKey, err = ca.GenerateCaKey()
-	}
+	opts.CAKey, err = loadCAKey(*caKey, *caDir)
 	if err != nil {
 		dieUsage(err)
 	}
 
-	if *caCert != "" {
-		opts.CaCert, err = ioutil.ReadFile(*caCert)
-	} else {
-		opts.CaCert, err = ca.GenerateCaCert(opts.CaKey)
-	}
+	opts.CACert, err = loadCACert(*caCert, *caDir)
 	if err != nil {
 		dieUsage(err)
 	}
@@ -60,5 +64,25 @@ func main() {
 	err = server.Listen(opts)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func loadCAKey(caKey, caDir string) ([]byte, error) {
+	if caKey != "" {
+		return ioutil.ReadFile(caKey)
+	} else if caDir != "" {
+		return ioutil.ReadFile(caDir + "/ca.key")
+	} else {
+		return ca.GenerateCAKey()
+	}
+}
+
+func loadCACert(caKey, caDir string) ([]byte, error) {
+	if caKey != "" {
+		return ioutil.ReadFile(caKey)
+	} else if caDir != "" {
+		return ioutil.ReadFile(caDir + "/ca.crt")
+	} else {
+		return ca.GenerateCAKey()
 	}
 }

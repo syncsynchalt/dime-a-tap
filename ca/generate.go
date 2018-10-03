@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 )
@@ -17,7 +18,7 @@ import (
 const rsaBits = 2048
 
 // generate a RSA key and return it as a PEM block
-func GenerateCaKey() ([]byte, error) {
+func GenerateCAKey() ([]byte, error) {
 	key, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func GenerateCaKey() ([]byte, error) {
 
 // generate a self-signed certificate for key suitable for CA use.
 // If these defaults aren't suitable, build your own using openssl or similar.
-func GenerateCaCert(pemKey []byte) ([]byte, error) {
+func GenerateCACert(pemKey []byte) ([]byte, error) {
 	derKey, _ := pem.Decode([]byte(pemKey))
 	if derKey == nil {
 		return nil, fmt.Errorf("unable to decode private key in PEM format: %s", pemKey)
@@ -80,4 +81,40 @@ func generateSubjectKeyId(key *rsa.PrivateKey) ([]byte, error) {
 	}
 	hash := sha1.Sum(bytes)
 	return hash[:], nil
+}
+
+func CreateCAStore(directory string) error {
+	err := os.MkdirAll(directory, 0755)
+	if err != nil {
+		return err
+	}
+
+	key, err := GenerateCAKey()
+	if err != nil {
+		return err
+	}
+	cert, err := GenerateCACert(key)
+	if err != nil {
+		return err
+	}
+
+	keyfile := directory + "/ca.key"
+	certfile := directory + "/ca.crt"
+
+	err = writeFileExcl(keyfile, key, 0600)
+	if err != nil {
+		return err
+	}
+	return writeFileExcl(certfile, cert, 0644)
+}
+
+// write data to file, which must not already exist
+func writeFileExcl(filename string, data []byte, perm os.FileMode) error {
+	kf, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+	if err != nil {
+		return err
+	}
+	defer kf.Close()
+	_, err = kf.Write(data)
+	return err
 }

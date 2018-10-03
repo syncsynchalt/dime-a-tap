@@ -33,9 +33,10 @@ type Opts struct {
 	// optional dir to store raw read/write info
 	RawDir string
 	// in PEM format
-	CaKey []byte
+	CAKey []byte
 	// in PEM format
-	CaCert []byte
+	CACert []byte
+	CADir  string
 }
 
 func Listen(opts Opts) error {
@@ -172,6 +173,6 @@ func getCertificate(hello *tls.ClientHelloInfo, l *log.Logger, opts *Opts) (*tls
 	}
 
 	// xxx todo
-	cert, err := tls.X509KeyPair(opts.CaCert, opts.CaKey)
+	cert, err := tls.X509KeyPair(opts.CACert, opts.CAKey)
 	return &cert, err
 }
