@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/syncsynchalt/dime-a-tap/ca"
-	"github.com/syncsynchalt/dime-a-tap/listen"
+	"github.com/syncsynchalt/dime-a-tap/server"
 )
 
 func dieUsage(err error) {
@@ -34,7 +34,7 @@ func main() {
 		dieUsage(err)
 	}
 
-	opts := listen.Opts{
+	opts := server.Opts{
 		Port:   port,
 		RawDir: *rawDir,
 	}
@@ -57,7 +57,7 @@ func main() {
 		dieUsage(err)
 	}
 
-	err = listen.Listen(opts)
+	err = server.Listen(opts)
 	if err != nil {
 		panic(err)
 	}
