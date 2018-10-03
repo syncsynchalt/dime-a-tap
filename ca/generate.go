@@ -18,13 +18,56 @@ import (
 const rsaBits = 2048
 
 // generate a RSA key and return it as a PEM block
-func GenerateCAKey() ([]byte, error) {
+func generateKey() ([]byte, error) {
 	key, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		return nil, err
 	}
 	derKey := x509.MarshalPKCS1PrivateKey(key)
 	return derToPem(derKey, "RSA PRIVATE KEY")
+}
+
+// generate a leaf certificate for domain
+func generateCert(domain string, domainKeyPEM, caKeyPEM, caCertPEM []byte) ([]byte, error) {
+	domainKey, err := pemToRSA(domainKeyPEM)
+	if err != nil {
+		return nil, err
+	}
+	caKey, err := pemToRSA(caKeyPEM)
+	if err != nil {
+		return nil, err
+	}
+	caCert, err := pemToCert(caCertPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(time.Now().UnixNano()),
+		Subject: pkix.Name{
+			Country:      []string{"US"},
+			Organization: []string{"Dime-A-Tap"},
+			CommonName:   domain,
+		},
+		NotBefore: time.Now().Add(-600).UTC(),
+		NotAfter:  time.Now().AddDate(1, 0, 0).UTC(),
+		KeyUsage:  x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageClientAuth,
+			x509.ExtKeyUsageServerAuth,
+		},
+	}
+
+	derCert, err := x509.CreateCertificate(rand.Reader, &template, caCert, domainKey.Public(), caKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return derToPem(derCert, "CERTIFICATE")
+}
+
+func GenerateCAKey() ([]byte, error) {
+	return generateKey()
 }
 
 // generate a self-signed certificate for key suitable for CA use.
@@ -69,6 +112,28 @@ func derToPem(bytes []byte, pemType string) ([]byte, error) {
 	sout := strings.Builder{}
 	err := pem.Encode(&sout, &pem.Block{Type: pemType, Bytes: bytes})
 	return []byte(sout.String()), err
+}
+
+func pemToRSA(pemkey []byte) (*rsa.PrivateKey, error) {
+	derKey, _ := pem.Decode(pemkey)
+	if derKey == nil {
+		return nil, fmt.Errorf("unable to decode private key in PEM format")
+	}
+	if derKey.Type != "RSA PRIVATE KEY" {
+		return nil, fmt.Errorf("unexpected private key type %s", derKey.Type)
+	}
+	return x509.ParsePKCS1PrivateKey(derKey.Bytes)
+}
+
+func pemToCert(pemcert []byte) (*x509.Certificate, error) {
+	derCert, _ := pem.Decode(pemcert)
+	if derCert == nil {
+		return nil, fmt.Errorf("unable to decode certificate in PEM format")
+	}
+	if derCert.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("unexpected certificate type %s", derCert.Type)
+	}
+	return x509.ParseCertificate(derCert.Bytes)
 }
 
 // required for CA certs, we generate ours by SHA1(pubkey)

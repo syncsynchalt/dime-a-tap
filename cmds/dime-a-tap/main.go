@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -32,8 +31,6 @@ func main() {
 	}
 
 	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
-	caCert := flag.String("cacert", "", "optional path to CA certificate file")
-	caKey := flag.String("cakey", "", "optional path to CA private key file")
 	caDir := flag.String("cadir", "", "optional path to CA key store (use 'dime-a-tap ca-init {dir}' to create)")
 	flag.Parse()
 	if flag.NArg() != 1 {
@@ -51,38 +48,8 @@ func main() {
 		CADir:  *caDir,
 	}
 
-	opts.CAKey, err = loadCAKey(*caKey, *caDir)
-	if err != nil {
-		dieUsage(err)
-	}
-
-	opts.CACert, err = loadCACert(*caCert, *caDir)
-	if err != nil {
-		dieUsage(err)
-	}
-
 	err = server.Listen(opts)
 	if err != nil {
 		panic(err)
-	}
-}
-
-func loadCAKey(caKey, caDir string) ([]byte, error) {
-	if caKey != "" {
-		return ioutil.ReadFile(caKey)
-	} else if caDir != "" {
-		return ioutil.ReadFile(caDir + "/ca.key")
-	} else {
-		return ca.GenerateCAKey()
-	}
-}
-
-func loadCACert(caKey, caDir string) ([]byte, error) {
-	if caKey != "" {
-		return ioutil.ReadFile(caKey)
-	} else if caDir != "" {
-		return ioutil.ReadFile(caDir + "/ca.crt")
-	} else {
-		return ca.GenerateCAKey()
 	}
 }
