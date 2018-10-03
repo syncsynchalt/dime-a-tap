@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/syncsynchalt/dime-a-tap/snoopconn"
 )
@@ -59,33 +58,110 @@ func Listen(opts Opts) error {
 		if err != nil {
 			l.Panicln("unable to accept connection:", err)
 		}
-		l.Printf("accepted connection from %s", conn.RemoteAddr().String())
 		go handleConnection(conn, &opts)
 	}
 }
 
-func handleConnection(conn net.Conn, opts *Opts) {
-	remoteName := conn.RemoteAddr().String()
-	l := log.New(os.Stdout, remoteName+" ", log.Ldate|log.Ltime)
-	buf := make([]byte, 10240)
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			l.Println("unable to read:", err)
-			break
-		}
+func handleConnection(clientConn net.Conn, opts *Opts) {
+	defer clientConn.Close()
 
-		data := buf[:n]
-		for len(data) > 0 && (data[len(data)-1] == '\r' || data[len(data)-1] == '\n') {
-			data = data[:len(data)-1]
-		}
-		l.Printf("Read [%s]\n", data)
-		if strings.ToUpper(string(data)) == "QUIT" {
-			break
-		}
-		conn.Write([]byte(fmt.Sprintf("echoing:%s\r\n", data)))
+	clientName := clientConn.RemoteAddr().String()
+	l := log.New(os.Stdout, clientName+" ", log.Ldate|log.Ltime)
+
+	tlsConn, ok := clientConn.(*tls.Conn)
+	if !ok {
+		panic("Unable to convert connection to tls.Conn, shouldn't happen")
 	}
-	conn.Close()
+	// needed to set up ServerName
+	err := tlsConn.Handshake()
+	if err != nil {
+		l.Println("error performing handshake", err)
+		return
+	}
+	serverName := tlsConn.ConnectionState().ServerName
+	if serverName == "" {
+		l.Println("client did not send hostname (SNI), unable to proceed, closing")
+		return
+	}
+	l.Printf("intercepted connection to %s:%d\n", serverName, opts.Port)
+
+	serverConn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", serverName, opts.Port), &tls.Config{
+		ServerName: serverName,
+	})
+	if err != nil {
+		l.Printf("unable to connect to %s: %s\n", serverName, err)
+		return
+	}
+	defer serverConn.Close()
+	l.Printf("connected to %s:%d\n", serverName, opts.Port)
+
+	readFromClient := make(chan []byte)
+	readFromServer := make(chan []byte)
+
+	go func() {
+		// reads from clientConn and writes to readFromClient
+		b := make([]byte, 4096)
+		for {
+			n, err := clientConn.Read(b)
+			if n != 0 {
+				bcopy := make([]byte, n)
+				copy(bcopy, b[:n])
+				readFromClient <- bcopy
+			}
+			if err != nil {
+				break
+			}
+		}
+		close(readFromClient)
+	}()
+
+	go func() {
+		// reads from serverConn and writes to readFromServer
+		b := make([]byte, 4096)
+		for {
+			n, err := serverConn.Read(b)
+			if n != 0 {
+				bcopy := make([]byte, n)
+				copy(bcopy, b[:n])
+				readFromServer <- bcopy
+			}
+			if err != nil {
+				break
+			}
+		}
+		close(readFromServer)
+	}()
+
+	for {
+		select {
+		case b, more := <-readFromClient:
+			for len(b) > 0 {
+				n, err := serverConn.Write(b)
+				if err != nil {
+					l.Println("unable to write data to server:", err)
+					return
+				}
+				b = b[n:]
+			}
+			if !more {
+				l.Println("client conn closed")
+				return
+			}
+		case b, more := <-readFromServer:
+			for len(b) > 0 {
+				n, err := clientConn.Write(b)
+				if err != nil {
+					l.Println("unable to write data to server:", err)
+					return
+				}
+				b = b[n:]
+			}
+			if !more {
+				l.Println("server conn closed")
+				return
+			}
+		}
+	}
 }
 
 func getCertificate(hello *tls.ClientHelloInfo, l *log.Logger, opts *Opts) (*tls.Certificate, error) {
