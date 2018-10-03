@@ -3,9 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/syncsynchalt/dime-a-tap/listen"
+	"io/ioutil"
 	"os"
 	"strconv"
+
+	"github.com/syncsynchalt/dime-a-tap/ca"
+	"github.com/syncsynchalt/dime-a-tap/listen"
 )
 
 func dieUsage(err error) {
@@ -19,6 +22,8 @@ func dieUsage(err error) {
 
 func main() {
 	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
+	caCert := flag.String("cacert", "", "optional path to CA certificate file")
+	caKey := flag.String("cakey", "", "optional path to CA private key file")
 	flag.Parse()
 	if flag.NArg() != 1 {
 		dieUsage(fmt.Errorf("No listen port specified"))
@@ -29,10 +34,30 @@ func main() {
 		dieUsage(err)
 	}
 
-	err = listen.Listen(listen.Opts{
+	opts := listen.Opts{
 		Port:   port,
 		RawDir: *rawDir,
-	})
+	}
+
+	if *caKey != "" {
+		opts.CaKey, err = ioutil.ReadFile(*caKey)
+	} else {
+		opts.CaKey, err = ca.GenerateCaKey()
+	}
+	if err != nil {
+		dieUsage(err)
+	}
+
+	if *caCert != "" {
+		opts.CaCert, err = ioutil.ReadFile(*caCert)
+	} else {
+		opts.CaCert, err = ca.GenerateCaCert(opts.CaKey)
+	}
+	if err != nil {
+		dieUsage(err)
+	}
+
+	err = listen.Listen(opts)
 	if err != nil {
 		panic(err)
 	}
