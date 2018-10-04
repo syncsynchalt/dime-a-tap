@@ -55,6 +55,6 @@ $ ls /tmp/captures
 Or use `tcpdump` on localhost:4430 to create a pcap file suitable for use with wireshark.  Example:
 ```
 $ dime-a-tap 443 &
-$ tcpdump -i lo0 port 4430 -o capture.pcap &
+$ tcpdump -i lo0 -s 0 -w capture.pcap port 4430
 (send traffic through the tap)
 ```
