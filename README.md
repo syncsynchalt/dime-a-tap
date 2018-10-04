@@ -9,9 +9,9 @@ Unencrypted traffic is sent over loopback to make it easily tcpdumpable.
 To start the proxy on port 443 (HTTPS):
 
 ```
-go get github.com/syncsynchalt/dime-a-tap/cmds/dime-a-tap
-export PATH=$PATH:~/go/bin
-dime-a-tap 443
+$ go get github.com/syncsynchalt/dime-a-tap/cmds/dime-a-tap
+$ export PATH=$PATH:~/go/bin
+$ dime-a-tap 443
 ```
 
 Now use /etc/hosts, captive DNS, or similar to redirect hosts and devices to your proxy for a given hostname.
@@ -21,8 +21,8 @@ Now use /etc/hosts, captive DNS, or similar to redirect hosts and devices to you
 To avoid security warnings you'll want to create a CA and distribute it to your devices:
 
 ```
-dime-a-tap ca-init /tmp/cadir
-dime-a-tap -cadir /tmp/cadir 443
+$ dime-a-tap ca-init /tmp/cadir
+$ dime-a-tap -cadir /tmp/cadir 443
 ```
 
 Install the file `/tmp/cadir/ca.crt` on your hosts or devices as a trusted CA.
@@ -35,10 +35,10 @@ To capture intercepted data, there are two options.
 
 Use `-capturedir {dir}` to write reads and writes to files in that dir. Example:
 ```
-mkdir /tmp/captures
-dime-a-tap -capturedir /tmp/captures 443 &
+$ mkdir /tmp/captures
+$ dime-a-tap -capturedir /tmp/captures 443 &
 (send traffic through the tap)
-ls /tmp/captures
+$ ls /tmp/captures
   total 56
   -rw-r--r--  1 user  wheel   75 Oct  4 12:45 127.0.0.1:52981.20181004124516.667781.c
   -rw-r--r--  1 user  wheel  756 Oct  4 12:45 127.0.0.1:52981.20181004124516.733675.s
@@ -54,7 +54,7 @@ ls /tmp/captures
 
 Or use `tcpdump` on 127.0.0.1:4430 to create a pcap file suitable for use with wireshark etc.  Example:
 ```
-dime-a-tap 443 &
-tcpdump -i lo0 port 4430 -o capture.pcap &
+$ dime-a-tap 443 &
+$ tcpdump -i lo0 port 4430 -o capture.pcap &
 (send traffic through the tap)
 ```
