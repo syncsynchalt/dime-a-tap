@@ -14,7 +14,7 @@ $ export PATH=$PATH:~/go/bin
 $ dime-a-tap 443
 ```
 
-Now use /etc/hosts, captive DNS, or similar to redirect hosts and devices to your proxy for a given hostname.
+Use /etc/hosts, captive DNS, or similar to redirect hosts and devices to your proxy for a given hostname.
 
 ### Creating a certificate store
 
@@ -25,15 +25,13 @@ $ dime-a-tap ca-init /tmp/cadir
 $ dime-a-tap -cadir /tmp/cadir 443
 ```
 
-Install the file `/tmp/cadir/ca.crt` on your hosts or devices as a trusted CA.
-
-(You can create `ca.key` and `ca.crt` yourself using `openssl` or similar tools if you prefer to customize the CA certificate).
+Install the certificate in `/tmp/cadir/ca.crt` as a trusted CA on your hosts or devices.
 
 ### Capturing the unencrypted data
 
 To capture intercepted data, there are two options.
 
-Use `-capturedir {dir}` to write client (.c) and server (.s) data to files in that dir. Example:
+Use `-capturedir {dir}` to write the unencrypted client (.c) and server (.s) conversation to files in that dir. Example:
 ```
 $ mkdir /tmp/captures
 $ dime-a-tap -capturedir /tmp/captures 443 &
