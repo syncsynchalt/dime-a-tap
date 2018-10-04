@@ -40,19 +40,19 @@ $ dime-a-tap -capturedir /tmp/captures 443 &
 (send traffic through the tap)
 $ ls /tmp/captures
   total 56
-  -rw-r--r--  1 user  wheel   75 Oct  4 12:45 52.6.191.28:52981.20181004124516.667781.c
-  -rw-r--r--  1 user  wheel  756 Oct  4 12:45 52.6.191.28:52981.20181004124516.733675.s
-  -rw-r--r--  1 user  wheel    0 Oct  4 12:45 52.6.191.28:52981.20181004124516.735306.c
-  -rw-r--r--  1 user  wheel   75 Oct  4 12:45 52.6.191.28:52989.20181004124551.808247.c
-  -rw-r--r--  1 user  wheel  756 Oct  4 12:45 52.6.191.28:52989.20181004124551.875861.s
-  -rw-r--r--  1 user  wheel    0 Oct  4 12:45 52.6.191.28:52989.20181004124551.877488.c
-  -rw-r--r--  1 user  wheel   75 Oct  4 12:46 52.6.191.28:52992.20181004124609.494528.c
-  -rw-r--r--  1 user  wheel  297 Oct  4 12:46 52.6.191.28:52992.20181004124609.554621.s
-  -rw-r--r--  1 user  wheel  459 Oct  4 12:46 52.6.191.28:52992.20181004124609.555327.s
-  -rw-r--r--  1 user  wheel    0 Oct  4 12:46 52.6.191.28:52992.20181004124609.556733.c
+  -rw-r--r--  1 user  wheel   75 Oct  4 12:45 192.168.69.42:52981.20181004124516.667781.c
+  -rw-r--r--  1 user  wheel  756 Oct  4 12:45 192.168.69.42:52981.20181004124516.733675.s
+  -rw-r--r--  1 user  wheel    0 Oct  4 12:45 192.168.69.42:52981.20181004124516.735306.c
+  -rw-r--r--  1 user  wheel   75 Oct  4 12:45 192.168.69.42:52989.20181004124551.808247.c
+  -rw-r--r--  1 user  wheel  756 Oct  4 12:45 192.168.69.42:52989.20181004124551.875861.s
+  -rw-r--r--  1 user  wheel    0 Oct  4 12:45 192.168.69.42:52989.20181004124551.877488.c
+  -rw-r--r--  1 user  wheel   75 Oct  4 12:46 192.168.69.42:52992.20181004124609.494528.c
+  -rw-r--r--  1 user  wheel  297 Oct  4 12:46 192.168.69.42:52992.20181004124609.554621.s
+  -rw-r--r--  1 user  wheel  459 Oct  4 12:46 192.168.69.42:52992.20181004124609.555327.s
+  -rw-r--r--  1 user  wheel    0 Oct  4 12:46 192.168.69.42:52992.20181004124609.556733.c
 ```
 
-Or use `tcpdump` on localhost:4430 to create a pcap file suitable for use with wireshark etc.  Example:
+Or use `tcpdump` on localhost:4430 to create a pcap file suitable for use with wireshark.  Example:
 ```
 $ dime-a-tap 443 &
 $ tcpdump -i lo0 port 4430 -o capture.pcap &
