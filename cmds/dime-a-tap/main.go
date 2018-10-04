@@ -30,9 +30,10 @@ func main() {
 		}
 	}
 
+	caDir := flag.String("cadir", "", "optional path to CA key store (use 'dime-a-tap ca-init {dir}' to create)")
+	tapPort := flag.Int("tapport", 4430, "localhost port to send unencrypted data over")
 	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
 	capDir := flag.String("capturedir", "", "optional directory to capture unencrypted data written to/from client")
-	caDir := flag.String("cadir", "", "optional path to CA key store (use 'dime-a-tap ca-init {dir}' to create)")
 	flag.Parse()
 	if flag.NArg() != 1 {
 		dieUsage(fmt.Errorf("No listen port specified"))
@@ -48,6 +49,7 @@ func main() {
 		RawDir:     *rawDir,
 		CaptureDir: *capDir,
 		CADir:      *caDir,
+		TapPort:    *tapPort,
 	}
 
 	err = server.Listen(opts)

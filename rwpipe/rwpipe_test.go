@@ -1,13 +1,14 @@
 package rwpipe_test
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
-	"bufio"
-	"net"
 
 	"github.com/syncsynchalt/dime-a-tap/rwpipe"
+	"github.com/syncsynchalt/dime-a-tap/server"
 	"github.com/syncsynchalt/dime-a-tap/test"
 )
 
@@ -19,13 +20,13 @@ func makeConnPair(t *testing.T, port int) (net.Conn, net.Conn) {
 	go func() {
 		conn1, err := l.Accept()
 		test.Ok(t, err)
-		c1<-conn1
+		c1 <- conn1
 	}()
 	c2 := make(chan net.Conn)
 	go func() {
 		conn2, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
 		test.Ok(t, err)
-		c2<-conn2
+		c2 <- conn2
 	}()
 	conn1 := <-c1
 	conn2 := <-c2
@@ -37,8 +38,10 @@ func TestRWPipe(t *testing.T) {
 
 	// conn1 <-tcp-> conn2 <-rwpipe-> conn3 <-tcp-> conn4
 
-	conn1, conn2 := makeConnPair(t, 8314)
-	conn3, conn4 := makeConnPair(t, 8315)
+	conn1, conn2, err := server.MakeConnPair(8314)
+	test.Ok(t, err)
+	conn3, conn4, err := server.MakeConnPair(8315)
+	test.Ok(t, err)
 
 	// the data we'll send on each end
 	data1 := strings.Split("asdfasdf\nasfasdfasdf\nasdfasdfASdfasdf\nasdfasdfasDFasdf\nasdfasDFasdfasdf\n", "\n")
@@ -47,7 +50,7 @@ func TestRWPipe(t *testing.T) {
 	// join conn2 to conn3
 	done := make(chan bool)
 	go func() {
-		rwpipe.PipeConns(conn2, conn3, "")
+		rwpipe.PipeConns(conn2, "conn2", conn3, "conn3", "")
 		conn2.Close()
 		conn3.Close()
 		done <- true
@@ -60,7 +63,7 @@ func TestRWPipe(t *testing.T) {
 		from1 := make([]byte, 0)
 		scan1 := bufio.NewScanner(conn1)
 		for _, s := range data1 {
-			_, err := conn1.Write([]byte(s+"\n"))
+			_, err := conn1.Write([]byte(s + "\n"))
 			test.Ok(t, err)
 			scanned := scan1.Scan()
 			test.Assert(t, scanned, "conn1 didn't scan")
@@ -78,7 +81,7 @@ func TestRWPipe(t *testing.T) {
 		from4 := make([]byte, 0)
 		scan4 := bufio.NewScanner(conn4)
 		for _, s := range data4 {
-			_, err := conn4.Write([]byte(s+"\n"))
+			_, err := conn4.Write([]byte(s + "\n"))
 			test.Ok(t, err)
 			scanned := scan4.Scan()
 			test.Assert(t, scanned, "conn4 didn't scan")
