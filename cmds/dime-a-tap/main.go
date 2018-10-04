@@ -31,6 +31,7 @@ func main() {
 	}
 
 	rawDir := flag.String("rawdir", "", "optional directory to write raw data written to/from client")
+	capDir := flag.String("capturedir", "", "optional directory to capture unencrypted data written to/from client")
 	caDir := flag.String("cadir", "", "optional path to CA key store (use 'dime-a-tap ca-init {dir}' to create)")
 	flag.Parse()
 	if flag.NArg() != 1 {
@@ -43,9 +44,10 @@ func main() {
 	}
 
 	opts := server.Opts{
-		Port:   port,
-		RawDir: *rawDir,
-		CADir:  *caDir,
+		Port:       port,
+		RawDir:     *rawDir,
+		CaptureDir: *capDir,
+		CADir:      *caDir,
 	}
 
 	err = server.Listen(opts)

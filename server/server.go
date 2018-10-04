@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/syncsynchalt/dime-a-tap/ca"
+	"github.com/syncsynchalt/dime-a-tap/rwpipe"
 	"github.com/syncsynchalt/dime-a-tap/snoopconn"
 )
 
@@ -33,6 +34,8 @@ type Opts struct {
 	Port int
 	// optional dir to store raw read/write info
 	RawDir string
+	// optional dir to store unencrypted read/write info
+	CaptureDir string
 	// if not set then creates memory-only version
 	CADir string
 }
@@ -101,71 +104,7 @@ func handleConnection(clientConn net.Conn, opts *Opts) (err error) {
 	defer serverConn.Close()
 	l.Printf("connected to %s:%d\n", serverName, opts.Port)
 
-	readFromClient := make(chan []byte)
-	readFromServer := make(chan []byte)
-
-	go func() {
-		// reads from clientConn and writes to readFromClient
-		b := make([]byte, 4096)
-		for {
-			n, err := clientConn.Read(b)
-			if n != 0 {
-				bcopy := make([]byte, n)
-				copy(bcopy, b[:n])
-				readFromClient <- bcopy
-			}
-			if err != nil {
-				break
-			}
-		}
-		close(readFromClient)
-	}()
-
-	go func() {
-		// reads from serverConn and writes to readFromServer
-		b := make([]byte, 4096)
-		for {
-			n, err := serverConn.Read(b)
-			if n != 0 {
-				bcopy := make([]byte, n)
-				copy(bcopy, b[:n])
-				readFromServer <- bcopy
-			}
-			if err != nil {
-				break
-			}
-		}
-		close(readFromServer)
-	}()
-
-	for {
-		select {
-		case b, more := <-readFromClient:
-			for len(b) > 0 {
-				n, err := serverConn.Write(b)
-				if err != nil {
-					return fmt.Errorf("unable to write data to server: %s", err)
-				}
-				b = b[n:]
-			}
-			if !more {
-				l.Println("client conn closed")
-				return
-			}
-		case b, more := <-readFromServer:
-			for len(b) > 0 {
-				n, err := clientConn.Write(b)
-				if err != nil {
-					return fmt.Errorf("unable to write data to client: %s", err)
-				}
-				b = b[n:]
-			}
-			if !more {
-				l.Println("server conn closed")
-				return nil
-			}
-		}
-	}
+	return rwpipe.PipeConns(clientConn, serverConn, opts.CaptureDir)
 }
 
 func getCertificate(hello *tls.ClientHelloInfo, l *log.Logger, caStore *ca.Store) (*tls.Certificate, error) {
