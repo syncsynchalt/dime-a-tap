@@ -9,7 +9,7 @@ Unencrypted traffic is sent over loopback to make it easily tcpdumpable.
 To start the proxy on port 443 (HTTPS):
 
 ```
-$ go get github.com/syncsynchalt/dime-a-tap/cmds/dime-a-tap
+$ go install github.com/syncsynchalt/dime-a-tap/cmds/dime-a-tap@latest
 $ export PATH=$PATH:~/go/bin
 $ dime-a-tap 443
 ```
